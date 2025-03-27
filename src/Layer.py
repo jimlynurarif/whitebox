@@ -63,7 +63,6 @@ class Layer:
         # W:      [input_size, output_size]
         # Z:      [batch_size, output_size]
         self.Z = np.dot(A_prev, self.W) + self.b
-        
         # Terapkan fungsi aktivasi
         if self.activation == 'relu':
             self.A = np.maximum(0, self.Z)
@@ -76,6 +75,35 @@ class Layer:
             self.A = self.Z  # Linear
         
         return self.A
+
+    def backward(self, dA, learning_rate, m_batch):
+        """
+        dA: Gradien dari LOSS terhadap output layer ini (A)
+        m_batch: Jumlah sampel dalam batch
+        """
+        # Hitung gradien terhadap Z
+        if self.activation == 'relu':
+            dZ = dA * (self.Z > 0)  # Pastikan dA dan Z memiliki dimensi yang sama
+        elif self.activation == 'sigmoid':
+            sig = 1 / (1 + np.exp(-self.Z))
+            dZ = dA * sig * (1 - sig)
+        elif self.activation == 'softmax':
+            dZ = dA  # Sudah dihitung di loss function
+        else:
+            dZ = dA  # Linear
+
+        # Hitung gradien bobot dan bias
+        self.dW = (self.A_prev.T @ dZ) / m_batch
+        self.db = np.sum(dZ, axis=0) / m_batch
+
+        # Hitung gradien untuk layer sebelumnya
+        dA_prev = dZ @ self.W.T
+        
+        # Update bobot
+        self.W -= learning_rate * self.dW
+        self.b -= learning_rate * self.db
+        
+        return dA_prev
 
     def __repr__(self):
         return (f"Layer(input_size={self.input_size}, output_size={self.output_size}, "

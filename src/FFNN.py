@@ -39,6 +39,54 @@ class FFNN:
             A = layer.forward(A)
         return A
     
+    def backward(self, X, Y, learning_rate):
+        m = Y.shape[0]
+        
+        # Hitung gradien loss terhadap output
+        if self.loss_function == 'categorical_cross_entropy' and self.layers[-1].activation == 'softmax':
+            # Special case: Softmax + CrossEntropy
+            dZ = self.layers[-1].A - Y
+        else:
+            # Hitung turunan loss biasa
+            if self.loss_function == 'mse':
+                dA = Loss.mse_derivative(self.layers[-1].A, Y)
+            elif self.loss_function == 'categorical_cross_entropy':
+                dA = Loss.categorical_cross_entropy_derivative(self.layers[-1].A, Y)
+            
+            # Hitung dZ untuk output layer
+            dZ = dA * self._activation_derivative(self.layers[-1].activation, self.layers[-1].Z)
+        
+        # Backpropagate melalui semua layer
+        for i in reversed(range(len(self.layers)-1)):  # Mulai dari layer sebelum output
+            layer = self.layers[i]
+            next_layer = self.layers[i+1]
+            
+            # Hitung dA untuk layer saat ini
+            dA = dZ @ next_layer.W.T
+            
+            # Hitung dZ untuk layer saat ini
+            dZ = dA * self._activation_derivative(layer.activation, layer.Z)
+            
+            # Update gradien
+            layer.dW = (layer.A_prev.T @ dZ) / m
+            layer.db = np.sum(dZ, axis=0) / m
+            
+            # Update bobot
+            layer.W -= learning_rate * layer.dW
+            layer.b -= learning_rate * layer.db
+    
+    def _activation_derivative(self, activation, Z):
+        if activation == 'linear':
+            return Activation.linear_derivative(Z)
+        elif activation == 'relu':
+            return Activation.relu_derivative(Z)
+        elif activation == 'sigmoid':
+            return Activation.sigmoid_derivative(Z)
+        elif activation == 'tanh':
+            return Activation.tanh_derivative(Z)
+        elif activation == 'softmax':
+            return 1  # Diasumsikan sudah dihitung di loss
+    
     def train(self, X_train, y_train, X_val, y_val, epochs=100, batch_size=32, learning_rate=0.01, verbose=0):
         history = {'train_loss': [], 'val_loss': []}
         for epoch in range(epochs):
