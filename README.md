@@ -43,6 +43,11 @@ The dataset can be accessed via the following link:
    ```bash
    pip install -r requirements.txt
    ```
+4. Install Graphviz (required for visualization):
+   - Download from [Graphviz official website](https://graphviz.org/download/), or if using a Debian-based Linux system, run:
+     ```bash
+     sudo apt install graphviz
+     ```
 
 ## How to Run
 
