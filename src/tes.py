@@ -71,7 +71,7 @@ history = ffnn_model.train(
     y_val=y_val_onehot,
     epochs=20,
     batch_size=128,
-    learning_rate=0.0001,
+    learning_rate=0.01,
     verbose=1
 )
 
@@ -81,6 +81,8 @@ test_pred_classes = np.argmax(test_pred, axis=1)
 y_test_int = y_test.astype(int)
 ffnn_accuracy = np.mean(test_pred_classes == y_test_int)
 ffnn_time = time.time() - t0
+
+ffnn_model.plot_as_graph()
 
 # MLP
 # ==============================

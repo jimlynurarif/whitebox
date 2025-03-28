@@ -1,5 +1,13 @@
 import matplotlib.pyplot as plt
+from graphviz import Digraph
+import networkx as nx
+from IPython.display import Image, display  # For Jupyter notebooks
+import tempfile
+import sys, os
 import pickle
+import random
+from pathlib import Path
+import string
 import numpy as np
 from Activation import Activation
 from Layer import Layer
@@ -126,7 +134,101 @@ class FFNN:
             return Loss.binary_cross_entropy(Y_pred, Y_true)
         elif self.loss_function == 'categorical_cross_entropy':
             return Loss.categorical_cross_entropy(Y_pred, Y_true)
+    def plot_as_graph(self, verbose=False):
+        """
+        Visualizes the neural network as a graph using Graphviz Digraph.
+        Shows neurons as nodes and connections as edges with weights/gradients.
+        """
+        dot = Digraph(comment='Neural Network')
+        dot.attr(rankdir='LR', splines='line')  # Left-right layout with straight lines
+        
+        if verbose:
+            # Create nodes for each neuron
+            for layer_idx, size in enumerate(self.layer_sizes):
+                with dot.subgraph(name=f'cluster_{layer_idx}') as sg:
+                    sg.attr(rank='same', style='invis')  # Invisible cluster for alignment
+                    for neuron_idx in range(size):
+                        if layer_idx == 0:
+                            sg.node(f'L{layer_idx}_N{neuron_idx}', 
+                                label=f'Input {neuron_idx}')
+                        elif layer_idx == len(self.layer_sizes) - 1:
+                            sg.node(f'L{layer_idx}_N{neuron_idx}', 
+                                label=f'Output {neuron_idx}')
+                        else:
+                            sg.node(f'L{layer_idx}_N{neuron_idx}', 
+                                label=f'Layer {layer_idx}\nNeuron {neuron_idx}')
+            # Create edges with weights and gradients
+            for conn_idx, layer in enumerate(self.layers):
+                input_size = layer.input_size
+                output_size = layer.output_size
+                
+                for i in range(input_size):
+                    for j in range(output_size):
+                        src = f'L{conn_idx}_N{i}'
+                        dest = f'L{conn_idx+1}_N{j}'
+                        
+                        # Get weight and gradient values
+                        weight = layer.W[i, j]
+                        grad = layer.dW[i, j] if hasattr(layer, 'dW') and layer.dW is not None else 0.0
+                        
+                        dot.edge(src, dest, 
+                                label=f'W: {weight:.2f}\nG: {grad:.2f}', 
+                                fontsize='8', 
+                                arrowsize='0.5')
+        else:
+            # Simplified nodes for layers
+            for i, size in enumerate(self.layer_sizes):
+                label = (
+                    f"Layer {i}\n"
+                    f"Size: {size}\n"
+                    f"{self.activations[i] if i<len(self.activations) else ''}"
+                )
+                dot.node(f'L{i}', label=label, shape='box', style='filled', fillcolor='#f0f0f0')
+            
+            # Simplified connections between layers
+            for i in range(len(self.layer_sizes)-1):
+                with dot.subgraph() as s:
+                    s.attr(label=f"W: {self.layers[i].W.shape} | dW: {self.layers[i].dW.shape if hasattr(self.layers[i], 'dW') else 'N/A'}")
+                    s.edge(f'L{i}', f'L{i+1}')
     
+        # Display the graph
+        try:
+            # Create temporary directory
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Generate random filename
+                rand_name = ''.join(random.choices(string.ascii_letters, k=10))
+                filepath = Path(tmpdir) / rand_name
+                
+                # Render to temporary directory
+                dot.render(filename=str(filepath), 
+                        format='png',
+                        cleanup=True,
+                        view=False)
+                
+                # Read and display the image
+                img_path = filepath.with_suffix('.png')
+                
+                if 'IPython' in sys.modules:
+                    display(Image(str(img_path)))
+                else:
+                    img = plt.imread(img_path)
+                    plt.figure(figsize=(12, 8))
+                    plt.imshow(img)
+                    plt.axis('off')
+                    plt.show()
+                    
+        except Exception as e:
+            print(f"Visualization error: {str(e)}")
+            print("Attempting direct rendering...")
+            dot.render('network_graph_fallback', view=True, format='png', cleanup=True)
+    def plot_weight_distribution(self, layers):
+        """Plots weight distribution for specified connection layers"""
+        self.plot_distribution(layers, is_weight=True)
+
+    def plot_gradient_distribution(self, layers):
+        """Plots gradient distribution for specified connection layers"""
+        self.plot_distribution(layers, is_weight=False)
+        
     def plot_distribution(self, layers, is_weight=True):
         for layer_idx in layers:
             layer = self.layers[layer_idx]
