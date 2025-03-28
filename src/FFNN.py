@@ -15,7 +15,15 @@ from Loss import Loss
 
 class FFNN:
     def __init__(self, layer_sizes, activations, loss_function, weight_inits):
+        """
+        Inisialisasi model FFNN
         
+        Parameters:
+        layer_sizes (list): Daftar ukuran tiap layer 
+        activations (list): Daftar fungsi aktivasi tiap layer
+        loss_function (str): Fungsi loss yang digunakan
+        weight_inits (list): Daftar konfigurasi inisialisasi bobot
+        """
         self.layer_sizes = layer_sizes
         self.activations = activations
         self.loss_function = loss_function
@@ -36,9 +44,8 @@ class FFNN:
                 output_size=output_size,
                 activation=activation,
                 weight_init=method,
-                **kwargs  # Parameter tambahan
+                **kwargs  
             )
-            # print(layer)
             self.layers.append(layer)
     
     def forward(self, X):
@@ -52,7 +59,7 @@ class FFNN:
         
         # Hitung gradien loss terhadap output
         if self.loss_function == 'categorical_cross_entropy' and self.layers[-1].activation == 'softmax':
-            # Special case: Softmax + CrossEntropy
+            
             dZ = self.layers[-1].A - Y
         else:
             # Hitung turunan loss biasa
@@ -93,7 +100,7 @@ class FFNN:
         elif activation == 'tanh':
             return Activation.tanh_derivative(Z)
         elif activation == 'softmax':
-            return 1  # Diasumsikan sudah dihitung di loss
+            return 1 
     
     def train(self, X_train, y_train, X_val, y_val, epochs=100, batch_size=32, learning_rate=0.01, verbose=0):
         history = {'train_loss': [], 'val_loss': []}

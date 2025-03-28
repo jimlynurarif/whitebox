@@ -3,9 +3,13 @@ from Activation import Activation
 class Layer:
     def __init__(self, input_size, output_size, activation, weight_init, **kwargs):
         """
-        input_size: Jumlah neuron di layer sebelumnya
-        output_size: Jumlah neuron di layer saat ini
-        W[i][j]: Bobot dari neuron ke-i (layer sebelumnya) ke neuron ke-j (layer saat ini)
+        Inisialisasi layer neural network.
+        
+        Parameters:
+        input_size (int): Jumlah neuron dari layer sebelumnya
+        output_size (int): Jumlah neuron di layer ini
+        activation (str): Fungsi aktivasi ('relu', 'sigmoid', 'softmax', dll)
+        weight_init (dict): Konfigurasi inisialisasi bobot
         """
         self.input_size = input_size
         self.output_size = output_size
@@ -16,7 +20,7 @@ class Layer:
         # Inisialisasi matriks bobot W dengan bentuk (input_size, output_size)
         self.W = self._initialize_weights()
         
-        # Inisialisasi bias untuk setiap neuron di layer saat ini
+        # Inisialisasi bobot bias untuk setiap neuron di layer saat ini
         self.b = np.zeros(output_size)
         
         # Gradien bobot dan bias
@@ -24,12 +28,11 @@ class Layer:
         self.db = np.zeros_like(self.b)
         
         # Menyimpan nilai selama forward pass
-        self.A_prev = None  # Aktivasi layer sebelumnya
-        self.Z = None        # Input sebelum aktivasi
-        self.A = None        # Output setelah aktivasi
+        self.A_prev = None 
+        self.Z = None        
+        self.A = None        
 
     def _initialize_weights(self):
-        """Inisialisasi matriks W dengan orientasi [source][target]"""
         if self.weight_init == 'zero':
             return np.zeros((self.input_size, self.output_size))
             
@@ -58,12 +61,7 @@ class Layer:
         """
         self.A_prev = A_prev
         
-        # Hitung input ke fungsi aktivasi: Z = A_prev . W + b
-        # A_prev: [batch_size, input_size]
-        # W:      [input_size, output_size]
-        # Z:      [batch_size, output_size]
         self.Z = np.dot(A_prev, self.W) + self.b
-        # Terapkan fungsi aktivasi
         if self.activation == 'relu':
             self.A = np.maximum(0, self.Z)
         elif self.activation == 'sigmoid':
@@ -72,25 +70,29 @@ class Layer:
             exp_Z = np.exp(self.Z - np.max(self.Z, axis=1, keepdims=True))
             self.A = exp_Z / exp_Z.sum(axis=1, keepdims=True)
         else:
-            self.A = self.Z  # Linear
+            self.A = self.Z 
         
         return self.A
 
     def backward(self, dA, learning_rate, m_batch):
         """
-        dA: Gradien dari LOSS terhadap output layer ini (A)
-        m_batch: Jumlah sampel dalam batch
+        Backprop 
+
+        Parameter:
+        dA (np.array): Gradien dari loss terhadap output layer ini
+        learning_rate (float): Tingkat pembelajaran
+        m_batch (int): Jumlah sampel dalam batch
         """
         # Hitung gradien terhadap Z
         if self.activation == 'relu':
-            dZ = dA * (self.Z > 0)  # Pastikan dA dan Z memiliki dimensi yang sama
+            dZ = dA * (self.Z > 0) 
         elif self.activation == 'sigmoid':
             sig = 1 / (1 + np.exp(-self.Z))
             dZ = dA * sig * (1 - sig)
         elif self.activation == 'softmax':
-            dZ = dA  # Sudah dihitung di loss function
+            dZ = dA 
         else:
-            dZ = dA  # Linear
+            dZ = dA  
 
         # Hitung gradien bobot dan bias
         self.dW = (self.A_prev.T @ dZ) / m_batch
