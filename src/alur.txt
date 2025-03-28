@@ -1,0 +1,13 @@
+IF mau load:
+    tanyakan path model dan data
+    jalankan
+ELSE:
+    tanyakan layer sizes  layer_sizes = [784, 128, 64, 10]
+    tanyakan activations = linear relu sigmoid tanh softmax
+    tanyakan lost function = mse, binary_cross_entropy, categorical_cross_entropy
+    tanyakan metode inisialisasi bobot : zero, uniform, normal
+    verbose 0 atau 1?
+    batch nya berapa
+    jalankan
+    mau save gak
+  

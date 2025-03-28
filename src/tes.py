@@ -35,11 +35,6 @@ run_time = time.time() - t0
 print("Example run in %.3f s" % run_time)
 # plt.show()
 
-
-X_train, X_val, y_train, y_val = train_test_split(
-    X_train, y_train, test_size=0.1, random_state=42
-)
-
 # 3. Implementasi FFNN Kustom
 # ==============================
 layer_sizes = [784, 128, 64, 10]
@@ -61,13 +56,13 @@ ffnn_model = FFNN(
 # Konversi label ke one-hot encoding
 encoder = OneHotEncoder(sparse_output=False)
 y_train_onehot = encoder.fit_transform(y_train.reshape(-1, 1))
-y_val_onehot = encoder.transform(y_val.reshape(-1, 1))
+y_val_onehot = encoder.transform(y_test.reshape(-1, 1))
 
 # Training
 history = ffnn_model.train(
     X_train=X_train,
     y_train=y_train_onehot,
-    X_val=X_val,
+    X_val=X_test,
     y_val=y_val_onehot,
     epochs=20,
     batch_size=128,
