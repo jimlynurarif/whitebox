@@ -14,7 +14,7 @@ from Layer import Layer
 from Loss import Loss
 
 class FFNN:
-    def __init__(self, layer_sizes, activations, loss_function, weight_inits):
+    def __init__(self, layer_sizes, activations, loss_function, weight_inits, regularization=None, lambda_reg=0.01):
         """
         Inisialisasi model FFNN
         
@@ -27,7 +27,8 @@ class FFNN:
         self.layer_sizes = layer_sizes
         self.activations = activations
         self.loss_function = loss_function
-        self.layers = []
+        self.regularization = regularization
+        self.lambda_reg = lambda_reg
         
         self.layers = []
         for i in range(len(layer_sizes) - 1):
@@ -56,6 +57,8 @@ class FFNN:
     
     def backward(self, X, Y, learning_rate):
         m = Y.shape[0]
+        dWs = []
+        dbs = []
         
         # Hitung gradien loss terhadap output
         if self.loss_function == 'categorical_cross_entropy' and self.layers[-1].activation == 'softmax':
@@ -71,6 +74,12 @@ class FFNN:
             # Hitung dZ untuk output layer
             dZ = dA * self._activation_derivative(self.layers[-1].activation, self.layers[-1].Z)
         
+        output_layer = self.layers[-1]
+        dW = (output_layer.A_prev.T @ dZ) / m
+        db = np.sum(dZ, axis=0) / m
+        dWs.append(dW)
+        dbs.append(db)
+        
         # Backpropagate melalui semua layer
         for i in reversed(range(len(self.layers)-1)):  # Mulai dari layer sebelum output
             layer = self.layers[i]
@@ -83,12 +92,25 @@ class FFNN:
             dZ = dA * self._activation_derivative(layer.activation, layer.Z)
             
             # Update gradien
-            layer.dW = (layer.A_prev.T @ dZ) / m
-            layer.db = np.sum(dZ, axis=0) / m
+            dW = (layer.A_prev.T @ dZ) / m
+            db = np.sum(dZ, axis=0) / m
+            dWs.insert(0, dW)
+            dbs.insert(0, db)
+        
+        # Apply regularization and update weights
+        for i in range(len(self.layers)):
+            layer = self.layers[i]
+            dW = dWs[i]
+            db = dbs[i]
+            
+            if self.regularization == 'l2':
+                dW += (self.lambda_reg / m) * layer.W
+            elif self.regularization == 'l1':
+                dW += (self.lambda_reg / m) * np.sign(layer.W)
             
             # Update bobot
-            layer.W -= learning_rate * layer.dW
-            layer.b -= learning_rate * layer.db
+            layer.W -= learning_rate * dW
+            layer.b -= learning_rate * db
     
     def _activation_derivative(self, activation, Z):
         if activation == 'linear':
@@ -136,11 +158,24 @@ class FFNN:
     
     def _compute_loss(self, Y_pred, Y_true):
         if self.loss_function == 'mse':
-            return Loss.mse(Y_pred, Y_true)
+            base_loss = Loss.mse(Y_pred, Y_true)
         elif self.loss_function == 'binary_cross_entropy':
-            return Loss.binary_cross_entropy(Y_pred, Y_true)
+            base_loss = Loss.binary_cross_entropy(Y_pred, Y_true)
         elif self.loss_function == 'categorical_cross_entropy':
-            return Loss.categorical_cross_entropy(Y_pred, Y_true)
+            base_loss = Loss.categorical_cross_entropy(Y_pred, Y_true)
+        else:
+            raise ValueError("Unsupported loss function")
+        
+        reg_loss = 0.0
+        m = Y_true.shape[0]
+        if self.regularization == 'l2':
+            sum_squared = sum(np.sum(np.square(layer.W)) for layer in self.layers)
+            reg_loss = 0.5 * self.lambda_reg * sum_squared / m
+        elif self.regularization == 'l1':
+            sum_abs = sum(np.sum(np.abs(layer.W)) for layer in self.layers)
+            reg_loss = self.lambda_reg * sum_abs / m
+        
+        return base_loss + reg_loss
     def plot_as_graph(self, verbose=False):
         """
         Visualizes the neural network as a graph using Graphviz Digraph.
